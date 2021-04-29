@@ -1,4 +1,4 @@
-Qiita (canonically pronounced *cheetah*)
+stQiita (canonically pronounced *cheetah*)
 ========================================
 
 |Build Status| |Coverage Status|
