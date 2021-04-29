@@ -83,6 +83,7 @@ class Transaction(object):
         try:
             if self.admin:
                 self._connection = connect(
+                    dbname=qiita_config.database,
                     user=qiita_config.admin_user,
                     password=qiita_config.admin_password,
                     host=qiita_config.host,
