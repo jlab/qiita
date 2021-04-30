@@ -155,41 +155,41 @@ def make_environment(load_ontologies, download_reference, add_demo_user):
                                "configuration")
 
     # Connect to the postgres server
-    with qdb.sql_connection.TRNADMIN:
-        sql = 'SELECT datname FROM pg_database WHERE datname = %s'
-        qdb.sql_connection.TRNADMIN.add(sql, [qiita_config.database])
-
-        if qdb.sql_connection.TRNADMIN.execute_fetchflatten():
-            raise QiitaEnvironmentError(
-                "Database {0} already present on the system. You can drop it "
-                "by running 'qiita-env drop'".format(qiita_config.database))
+#    with qdb.sql_connection.TRNADMIN:
+#        sql = 'SELECT datname FROM pg_database WHERE datname = %s'
+#        qdb.sql_connection.TRNADMIN.add(sql, [qiita_config.database])
+#
+#        if qdb.sql_connection.TRNADMIN.execute_fetchflatten():
+#            raise QiitaEnvironmentError(
+#                "Database {0} already present on the system. You can drop it "
+#                "by running 'qiita-env drop'".format(qiita_config.database))
 
     # Create the database
-    print('Creating database')
+#    print('Creating database')
     create_settings_table = True
-    try:
-        with qdb.sql_connection.TRNADMIN:
-            qdb.sql_connection.TRNADMIN.add(
-                'CREATE DATABASE %s' % qiita_config.database)
-            qdb.sql_connection.TRNADMIN.execute()
-        qdb.sql_connection.TRN.close()
-    except ValueError as error:
-        # if database exists ignore
-        msg = 'database "%s" already exists' % qiita_config.database
-        if msg in str(error):
-            print("Database exits, let's make sure it's test")
-            with qdb.sql_connection.TRN:
+#    try:
+#        with qdb.sql_connection.TRNADMIN:
+#            qdb.sql_connection.TRNADMIN.add(
+#                'CREATE DATABASE %s' % qiita_config.database)
+#            qdb.sql_connection.TRNADMIN.execute()
+#        qdb.sql_connection.TRN.close()
+#    except ValueError as error:
+#        # if database exists ignore
+#        msg = 'database "%s" already exists' % qiita_config.database
+#        if msg in str(error):
+#            print("Database exits, let's make sure it's test")
+#            with qdb.sql_connection.TRN:
                 # Insert the settings values to the database
-                sql = """SELECT test FROM settings"""
-                qdb.sql_connection.TRN.add(sql)
-                is_test = qdb.sql_connection.TRN.execute_fetchlast()
-                if not is_test:
-                    print('Not a test database')
-                    raise
-                create_settings_table = False
-        else:
-            raise
-    qdb.sql_connection.TRNADMIN.close()
+#                sql = """SELECT test FROM settings"""
+#                qdb.sql_connection.TRN.add(sql)
+#                is_test = qdb.sql_connection.TRN.execute_fetchlast()
+#                if not is_test:
+#                    print('Not a test database')
+#                    raise
+#                create_settings_table = False
+#        else:
+#            raise
+#    qdb.sql_connection.TRNADMIN.close()
 
     with qdb.sql_connection.TRN:
         print('Inserting database metadata')
