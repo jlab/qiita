@@ -66,3 +66,6 @@ qiita_ware/test/test_data/test_key
 
 # configuration files as they will change based on local machines
 qiita_pet/*.conf
+
+# Ignore credentials
+qiita_core/support_files/config_test.cfg
