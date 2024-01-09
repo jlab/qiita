@@ -54,6 +54,7 @@
            target:target_prefix + '/upload/',
            query:{study_id:this.study_id},
            prioritizeFirstAndLastChunk:false,
+           forceChunkSize:true,
            throttleProgressCallbacks:1
          });
        if(!this.resumable.support) {
