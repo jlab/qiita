@@ -458,6 +458,9 @@
               </div>
               <button tabindex="3" type="submit" class="btn btn-success">Sign in</button>
             </form>
+            <form class="navbar-form navbar-right" role="form" action="{% raw qiita_config.portal_dir %}/auth/OIDC_login/" method="post">
+              <button type="submit" class="btn btn-success">OIDC Login</button>
+            </form>
             {% end %}
             <ul class="nav navbar-nav">
               <li>
