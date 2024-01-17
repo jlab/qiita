@@ -20,7 +20,7 @@ from qiita_core.util import is_test_environment
 from qiita_pet.handlers.base_handlers import (
     MainHandler, NoPageHandler, IFrame)
 from qiita_pet.handlers.auth_handlers import (
-    AuthCreateHandler, AuthLoginHandler, AuthLogoutHandler, AuthVerifyHandler)
+    AuthCreateHandler, AuthLoginHandler, AuthLoginOIDCHandler, AuthLogoutHandler, AuthVerifyHandler)
 from qiita_pet.handlers.user_handlers import (
     ChangeForgotPasswordHandler, ForgotPasswordHandler, UserProfileHandler,
     UserMessagesHander, UserJobs)
@@ -105,6 +105,7 @@ class Application(tornado.web.Application):
         handlers = [
             (r"/", MainHandler),
             (r"/auth/login/", AuthLoginHandler),
+            (r"/auth/login_OIDC", AuthLoginOIDCHandler),
             (r"/auth/logout/", AuthLogoutHandler),
             (r"/auth/create/", AuthCreateHandler),
             (r"/auth/verify/(.*)", AuthVerifyHandler),

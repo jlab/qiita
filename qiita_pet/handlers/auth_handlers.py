@@ -7,6 +7,7 @@
 # -----------------------------------------------------------------------------
 
 from tornado.escape import url_escape, json_encode
+from tornado.auth import OAuth2Mixin, OpenIdMixin
 
 from qiita_pet.handlers.base_handlers import BaseHandler
 from qiita_core.qiita_settings import qiita_config, r_client
@@ -163,6 +164,40 @@ class AuthLoginHandler(BaseHandler):
         else:
             self.render("index.html", message=msg, level='danger')
 
+    def set_current_user(self, user):
+        if user:
+            self.set_secure_cookie("user", json_encode(user))
+        else:
+            self.clear_cookie("user")
+
+class AuthLoginOIDCHandler(BaseHandler, OAuth2Mixin, OpenIdMixin):
+    """user login via OIDC"""
+
+    #_OAUTH_AUTHORIZE_URL = "http://localhost:9990/realms/qiita_realm/protocol/openid-connect/auth"
+    #_OAUTH_ACCESS_TOKEN_URL = "http://localhost:9990/realms/qiita_realm/protocol/openid-connect/token"
+    SUPPORTED_METHODS = ("CONNECT", "GET", "HEAD", "POST", "DELETE", "PATCH", "PUT", "OPTIONS")
+
+    def get(self):
+        with ("/home/qiita/Qiita/test.txt", "w") as logfile:
+            logfile.write("Test")
+        redirect_uri = "%s/" % qiita_config.portal_dir
+
+        code = self.get_argument('code', None)
+
+        if code:
+            username = self.get_authenticated_user()
+            self.set_current_user(username)
+            self.redirect(redirect_uri)
+            return 
+
+        else:      
+            self.authorize_redirect(
+                redirect_uri=redirect_uri,
+                client_id='qiita_vm_test_client',
+                client_secret='eripffGWp5zP7E9dcdWS5nXgyAK88RCe',
+            )
+        return
+    post = get
     def set_current_user(self, user):
         if user:
             self.set_secure_cookie("user", json_encode(user))
