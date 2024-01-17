@@ -178,7 +178,7 @@ class AuthLoginOIDCHandler(BaseHandler, OAuth2Mixin, OpenIdMixin):
     SUPPORTED_METHODS = ("CONNECT", "GET", "HEAD", "POST", "DELETE", "PATCH", "PUT", "OPTIONS")
 
     def get(self):
-        redirect_uri = "%s/" % qiita_config.portal_dir
+        redirect_uri = "%s/" % qiita_config.base_url
 
         code = self.get_argument('code', None)
 
