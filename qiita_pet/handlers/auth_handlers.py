@@ -237,9 +237,6 @@ class AuthLoginOIDCHandler(BaseHandler, KeycloakMixin):
                     "Authorization": "Bearer {}".format(access_token)
                 },
             )
-            f = open("/home/qiita/Qiita/test_user_if.txt", "a")
-            f.write("Hi")
-            f.close() 
             http_client = AsyncHTTPClient()
             user_info_res = await http_client.fetch(user_info_req, raise_error=False)
             user_info_res_json = json.loads(user_info_res.body.decode('utf8', 'replace'))
