@@ -94,7 +94,8 @@ STATIC_PATH = join(DIRNAME, "static")
 TEMPLATE_PATH = join(DIRNAME, "templates")  # base folder for webpages
 _, RES_PATH = get_mountpoint('job')[0]
 COOKIE_SECRET = b64encode(uuid4().bytes + uuid4().bytes)
-DEBUG = qiita_config.test_environment
+#DEBUG = qiita_config.test_environment
+DEBUG = True
 
 
 _vendor_js = join(STATIC_PATH, 'vendor', 'js')
@@ -105,7 +106,7 @@ class Application(tornado.web.Application):
         handlers = [
             (r"/", MainHandler),
             (r"/auth/login/", AuthLoginHandler),
-            (r"/auth/login_OIDC", AuthLoginOIDCHandler),
+            (r"/auth/login_OIDC/", AuthLoginOIDCHandler),
             (r"/auth/logout/", AuthLogoutHandler),
             (r"/auth/create/", AuthCreateHandler),
             (r"/auth/verify/(.*)", AuthVerifyHandler),

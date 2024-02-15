@@ -5,6 +5,8 @@
 {% set user = current_user %}
 {% set qiita_version, qiita_sha = get_qiita_version() %}
 {% set biom_metadata_release, archive_release = get_release_info() %}
+{% set oidc_activity = qiita_config.oidc_active %}
+
 
 {% set level = globals().get('level', '') %}
 {% if level not in {'danger', 'success', 'info', 'warning'} %}
@@ -157,6 +159,12 @@
           window.location.href = '{% raw qiita_config.portal_dir %}/release/download/public';
         });
 
+
+        $('#qiita_signin_modal').click(function(e){
+          e.preventDefault();
+          $('.qiita_auth_signin_options').modal('hide');
+          window.location.href = '{% raw qiita_config.portal_dir %}';
+        });
         // Based on http://codepen.io/willvincent/pen/LbeKKW
         //    and   https://datatables.net/examples/api/row_details.html
 
@@ -443,6 +451,29 @@
                 </ul>
               </li>
             </ul>
+
+            <!-- check for OIDC parameter -->
+            {% elif oidc_activity == 'True' %}
+            <ul class="navbar-form navbar-right" role="form" method="post">
+              <button id="oidc_modal_button" onclick="document.getElementById('oidc_modal').style.display='block'" class="btn btn-info">Sign In</button>
+              <div id="oidc_modal" class="modal">
+                <div class="modal-content">
+                  <div class="modal-dialog modal-dialog-centered" role="document">
+                    <span onclick="document.getElementById('oidc_modal').style.display='none'" class="close">&times;</span>
+                    <p>Please Login via your preferred OIDC Identity Provider</p>
+                    <form action="{% raw qiita_config.portal_dir %}/auth/login_OIDC/" method="post">
+                      <button type="submit" class="btn btn-success">OIDC Login</button>
+                    </form>                  
+                    <p>If this is your first time using this Qiita instance, please register first.</p>
+                    <form action="{% raw qiita_config.portal_dir %}/auth/create/">
+                      <button type="submit" class="btn btn-info">Create Qiita User</button>
+                    </form>
+
+                  </div>
+                </div>
+              </div>
+            </ul>
+
             <!-- otherwise show the login form -->
             {% else %}
             <form action="{% raw qiita_config.portal_dir %}/auth/create/" class="navbar-form navbar-right">
@@ -458,9 +489,8 @@
               </div>
               <button tabindex="3" type="submit" class="btn btn-success">Sign in</button>
             </form>
-            <form class="navbar-form navbar-right" role="form" action="{% raw qiita_config.portal_dir %}/auth/login_OIDC" method="post">
-              <button type="submit" class="btn btn-success">OIDC Login</button>
-            </form>
+
+      
             {% end %}
             <ul class="nav navbar-nav">
               <li>
