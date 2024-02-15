@@ -152,6 +152,7 @@ class ConfigurationManager(object):
         self._get_vamps(config)
         self._get_portal(config)
         self._iframe(config)
+        self._get_oidc(config)
 
     def _get_main(self, config):
         """Get the configuration of the main section"""
@@ -319,3 +320,11 @@ class ConfigurationManager(object):
 
     def _iframe(self, config):
         self.iframe_qiimp = config.get('iframe', 'QIIMP')
+
+    def _get_oidc(self, config):
+        self.oidc_active = config.get('oidc', 'OIDC_ACTIVE')
+        self.oidc_client_id = config.get('oidc', 'OIDC_CLIENT_ID')
+        self.oidc_client_secret = config.get('oidc', 'OIDC_CLIENT_SECRET')
+        self.oidc_oauth_acces_token_url = config.get('oidc', 'OAUTH_ACCESS_TOKEN_URL')
+        self.oidc_oauth_authorize_url = config.get('oidc', 'OAUTH_AUTHORIZE_URL')
+        self.oidc_oauth_userinfo_url = config.get('oidc', 'OAUTH_USERINFO_URL')
