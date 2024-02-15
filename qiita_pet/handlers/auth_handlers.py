@@ -7,7 +7,21 @@
 # -----------------------------------------------------------------------------
 
 from tornado.escape import url_escape, json_encode
-from tornado.auth import OAuth2Mixin, OpenIdMixin
+from tornado.auth import OAuth2Mixin
+
+import sys
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest
+
+import urllib.parse
+import json
+
+from tornado.web import RequestHandler
+from typing import Any, Dict
+import urllib.parse
+from tornado import escape, web
+
+import json
+
 
 from qiita_pet.handlers.base_handlers import BaseHandler
 from qiita_core.qiita_settings import qiita_config, r_client
@@ -166,41 +180,84 @@ class AuthLoginHandler(BaseHandler):
 
     def set_current_user(self, user):
         if user:
-            self.set_secure_cookie("user", json_encode(user))
+            self.set_secure_cookie("user", json_encode(user), SameSite=None)
+            h = open("/home/qiita/Qiita/test_user_normallogin.txt", "a")
+            h.write(str(user)+ "\n")
+            h.close()
         else:
             self.clear_cookie("user")
 
-class AuthLoginOIDCHandler(BaseHandler, OAuth2Mixin, OpenIdMixin):
-    """user login via OIDC"""
+class KeycloakMixin(OAuth2Mixin):
+    _OIDC_CLIENT_ID = '%s' % qiita_config.oidc_client_id
+    _OIDC_CLIENT_SECRET = '%s' % qiita_config.oidc_client_secret
+    _OAUTH_ACCESS_TOKEN_URL = '%s' % qiita_config.oidc_oauth_acces_token_url
+    _OAUTH_AUTHORIZE_URL = '%s' % qiita_config.oidc_oauth_authorize_url
+    _OAUTH_USERINFO_URL = '%s' % qiita_config.oidc_oauth_userinfo_url
 
-    #_OAUTH_AUTHORIZE_URL = "http://localhost:9990/realms/qiita_realm/protocol/openid-connect/auth"
-    #_OAUTH_ACCESS_TOKEN_URL = "http://localhost:9990/realms/qiita_realm/protocol/openid-connect/token"
+    async def get_authenticated_user(
+        self, redirect_uri: str, code: str
+    ) -> Dict[str, Any]:
+        http = self.get_auth_http_client()
+        body = urllib.parse.urlencode(
+            {
+                "redirect_uri": redirect_uri,
+                "code": code,
+                "client_id": self._OIDC_CLIENT_ID,
+                "client_secret": self._OIDC_CLIENT_SECRET,
+                "grant_type": "authorization_code",
+                #"scope": "openid"
+            }
+        )
+        response = await http.fetch(
+            self._OAUTH_ACCESS_TOKEN_URL,
+            method="POST",
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            body=body,
+        )
+        return escape.json_decode(response.body)
+
+class AuthLoginOIDCHandler(BaseHandler, KeycloakMixin):
     SUPPORTED_METHODS = ("CONNECT", "GET", "HEAD", "POST", "DELETE", "PATCH", "PUT", "OPTIONS")
 
-    def get(self):
-        redirect_uri = "%s/" % qiita_config.base_url
-
-        code = self.get_argument('code', None)
-
+    async def get(self):
+        code = self.get_argument('code', False)
         if code:
-            username = self.get_authenticated_user()
-            self.set_current_user(username)
-            self.redirect(redirect_uri)
-            return 
-
-        else:      
-            self.authorize_redirect(
-                redirect_uri=redirect_uri,
-                client_id='qiita_vm_test_client',
-                client_secret='eripffGWp5zP7E9dcdWS5nXgyAK88RCe',
+            access = await self.get_authenticated_user(
+                redirect_uri='%s/auth/login_OIDC/' % qiita_config.base_url,
+                code=self.get_argument('code')
             )
-        return
-    post = get
-    def set_current_user(self, user):
-        if user:
-            self.set_secure_cookie("user", json_encode(user))
+            access_token = access['access_token']
+            if not access_token:
+                raise web.HTTPError(400, "failed to get access token")
+            user_info_req = HTTPRequest(
+                self._OAUTH_USERINFO_URL,
+                method="GET",
+                headers={
+                    "Accept": "application/json",
+                    "Authorization": "Bearer {}".format(access_token)
+                },
+            )
+            f = open("/home/qiita/Qiita/test_user_if.txt", "a")
+            f.write("Hi")
+            f.close() 
+            http_client = AsyncHTTPClient()
+            user_info_res = await http_client.fetch(user_info_req, raise_error=False)
+            user_info_res_json = json.loads(user_info_res.body.decode('utf8', 'replace'))
+            print("  user info: %s" % user_info_res, file=sys.stderr)
+            self.set_secure_cookie("user", user_info_res_json['email'])
+            self.set_secure_cookie("token", access_token)
+
+            self.redirect('%s/' % qiita_config.base_url)
         else:
-            self.clear_cookie("user")
+            self.authorize_redirect(
+                 redirect_uri='%s/auth/login_OIDC/' % qiita_config.base_url,
+                 client_id=self._OIDC_CLIENT_ID,
+                 client_secret=self._OIDC_CLIENT_SECRET,
+                 response_type='code',
+                 scope=['openid']  # this was missing!
+            )
+    post = get
+   
 
 
 class AuthLogoutHandler(BaseHandler):
