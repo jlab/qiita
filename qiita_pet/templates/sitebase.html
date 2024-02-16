@@ -455,7 +455,7 @@
             <!-- check for OIDC parameter -->
             {% elif oidc_activity == 'True' %}
             <ul class="navbar-form navbar-right" role="form" method="post">
-              <button id="oidc_modal_button" onclick="document.getElementById('oidc_modal').style.display='block'" class="btn btn-info">Sign In</button>
+              <button id="oidc_modal_button" onclick="document.getElementById('oidc_modal').style.display='block'" class="btn btn-success">Sign In</button>
               <div id="oidc_modal" class="modal">
                 <div class="modal-content">
                   <div class="modal-dialog modal-dialog-centered" role="document">
@@ -463,8 +463,10 @@
                     <p>Please Login via your preferred OIDC Identity Provider</p>
                     <form action="{% raw qiita_config.portal_dir %}/auth/login_OIDC/" method="post">
                       <button type="submit" class="btn btn-success">OIDC Login</button>
-                    </form>                  
+                    </form>       
+                    <p>   </p>           
                     <p>If this is your first time using this Qiita instance, please register first.</p>
+                    
                     <form action="{% raw qiita_config.portal_dir %}/auth/create/">
                       <button type="submit" class="btn btn-info">Create Qiita User</button>
                     </form>
