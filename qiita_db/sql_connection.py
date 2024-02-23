@@ -94,6 +94,8 @@ class Transaction(object):
                                            database=qiita_config.database,
                                            host=qiita_config.host,
                                            port=qiita_config.port)
+            print("STEFAN", user, password, host, port)
+
         except OperationalError as e:
             # catch three known common exceptions and raise runtime errors
             try:
