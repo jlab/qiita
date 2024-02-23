@@ -149,6 +149,7 @@ jobs:
           echo "/var/run/postgresql"
           ls -la /var/run/postgresql; true
           echo "psql -U postgres --port=32768 -d qiita_test"
-          psql -U postgres --host=localhost --port=32768 --password=postgres -d qiita_test -c "SELECT * FROM qiita.software;"
-          psql -U postgres --host=localhost --port=32768 --password=postgres -d qiita_test -c "SELECT * FROM qiita.default_workflow;"
+          
+          PGPASSWORD=postgres psql -U postgres --host=localhost --port=32768 -d qiita_test -c "SELECT * FROM qiita.software;"
+          PGPASSWORD=postgres psql -U postgres --host=localhost --port=32768 -d qiita_test -c "SELECT * FROM qiita.default_workflow;"
           
