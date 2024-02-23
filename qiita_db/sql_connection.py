@@ -95,7 +95,7 @@ class Transaction(object):
                                            database=qiita_config.database,
                                            host=qiita_config.host,
                                            port=qiita_config.port)
-               print("STEFAN:user", qiita_config.admin_user, qiita_config.admin_password, qiita_config.host, qiita_config.port)
+                print("STEFAN:user", qiita_config.admin_user, qiita_config.admin_password, qiita_config.host, qiita_config.port)
 
         except OperationalError as e:
             # catch three known common exceptions and raise runtime errors
