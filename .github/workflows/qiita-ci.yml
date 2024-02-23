@@ -142,7 +142,8 @@ jobs:
           sed 's#export PATH="/home/travis/miniconda3/bin:$PATH"; source #source /home/runner/.profile; conda #' -i qiita_db/support_files/patches/54.sql
           qiita-env make #--no-load-ontologies
           
+          ls -la /var/run/postgresql/*
           echo "psql -U postgres --port=32768 -d qiita_test"
-          psql -U postgres --port=32768 -d qiita_test -c "SELECT * FROM qiita.software;"
-          psql -U postgres --port=32768 -d qiita_test -c "SELECT * FROM qiita.default_workflow;"
+          psql -U postgres --host=localhost --port=32768 -d qiita_test -c "SELECT * FROM qiita.software;"
+          psql -U postgres --host=localhost--port=32768 -d qiita_test -c "SELECT * FROM qiita.default_workflow;"
           
