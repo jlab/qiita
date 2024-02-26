@@ -12,6 +12,7 @@ from os import environ, mkdir
 from base64 import b64encode
 from uuid import uuid4
 import warnings
+import json
 
 from .exceptions import MissingConfigSection
 
@@ -323,8 +324,6 @@ class ConfigurationManager(object):
 
     def _get_oidc(self, config):
         self.oidc_active = config.get('oidc', 'OIDC_ACTIVE')
-        self.oidc_client_id = config.get('oidc', 'OIDC_CLIENT_ID')
-        self.oidc_client_secret = config.get('oidc', 'OIDC_CLIENT_SECRET')
-        self.oidc_oauth_acces_token_url = config.get('oidc', 'OAUTH_ACCESS_TOKEN_URL')
-        self.oidc_oauth_authorize_url = config.get('oidc', 'OAUTH_AUTHORIZE_URL')
-        self.oidc_oauth_userinfo_url = config.get('oidc', 'OAUTH_USERINFO_URL')
+        self.oidc_clients = json.loads(config.get('oidc', 'OIDC_CREDENTIALS'))
+        
+       
