@@ -189,14 +189,8 @@ class AuthLoginHandler(BaseHandler):
             self.clear_cookie("user")
 
 
-#provider="KEYCLOAK_1"   
 
 class KeycloakMixin(OAuth2Mixin):
-    #_OIDC_CLIENT_ID = '%s' % qiita_config.oidc_client_id
-    #_OIDC_CLIENT_SECRET = '%s' % qiita_config.oidc_client_secret
-    #_OAUTH_ACCESS_TOKEN_URL = '%s' % qiita_config.oidc_oauth_acces_token_url
-    #_OAUTH_AUTHORIZE_URL = '%s' % qiita_config.oidc_oauth_authorize_url
-    #_OAUTH_USERINFO_URL = '%s' % qiita_config.oidc_oauth_userinfo_url
     _OIDC_CLIENT_ID = '%s' % qiita_config.oidc_clients['KEYCLOAK_1']['OIDC_CLIENT_ID']
     _OIDC_CLIENT_SECRET = '%s' % qiita_config.oidc_clients['KEYCLOAK_1']['OIDC_CLIENT_SECRET']
     _OAUTH_ACCESS_TOKEN_URL = '%s' % qiita_config.oidc_clients['KEYCLOAK_1']['OAUTH_ACCESS_TOKEN_URL']
@@ -213,6 +207,7 @@ class KeycloakMixin(OAuth2Mixin):
     async def get_authenticated_user(
         self, redirect_uri: str, code: str
     ) -> Dict[str, Any]:
+        
         http = self.get_auth_http_client()
         body = urllib.parse.urlencode(
             {
@@ -220,8 +215,7 @@ class KeycloakMixin(OAuth2Mixin):
                 "code": code,
                 "client_id": self._OIDC_CLIENT_ID,
                 "client_secret": self._OIDC_CLIENT_SECRET,
-                "grant_type": "authorization_code",
-                #"scope": "openid"
+                "grant_type": "authorization_code"
             }
         )
         response = await http.fetch(
@@ -235,17 +229,15 @@ class KeycloakMixin(OAuth2Mixin):
 class AuthLoginOIDCHandler(BaseHandler, KeycloakMixin):
     SUPPORTED_METHODS = ("CONNECT", "GET", "HEAD", "POST", "DELETE", "PATCH", "PUT", "OPTIONS")
 
-    async def get(self):
+    async def get(self, args):
         code = self.get_argument('code', False)
         if code:
-            #once we leave for login with the OIDC IP our variables are reset. The very ugly current solution is to save the button click in a file
-            #and read it after we were redirected
-            with open ("/tmp/provider_keycloak.txt", "r") as f:
-                provider = f.readline()
-                self.change_settings(provider)
-                os.remove(f.name)
+            # get OIDC IP from URI
+            provider = self.path_args[0]
+            # change Keycloak settings to match for authenticated user
+            self.change_settings(provider)
             access = await self.get_authenticated_user(
-                redirect_uri='%s/auth/login_OIDC/' % qiita_config.base_url,
+                redirect_uri='%s/auth/login_OIDC/%s' % (qiita_config.base_url, provider),
                 code=self.get_argument('code')
             )
             access_token = access['access_token']
@@ -271,24 +263,21 @@ class AuthLoginOIDCHandler(BaseHandler, KeycloakMixin):
             self.redirect('%s/' % qiita_config.base_url)
         else:
             try:
+                #fetch requested client name from button call
                 for client in qiita_config.oidc_clients.keys():
                     if self.get_argument(f'{client}', None) is not None:
                         provider = client
-                        with open ("/tmp/provider_keycloak.txt", "w") as f:
-                            f.write(str(provider))
                     else:
                         pass
             except ValueError:
-                with open ("/home/qiita/Qiita/provider1.txt", "w") as f:
-                    f.write("Will nicht")
-                print("Provider was not set!")
+                raise web.HTTPError(400, "failed to fetch client name")
 
             self.authorize_redirect(
-                 redirect_uri='%s/auth/login_OIDC/' % qiita_config.base_url,
+                 redirect_uri='%s/auth/login_OIDC/%s' % (qiita_config.base_url, provider),
                  client_id='%s' % qiita_config.oidc_clients[f'{provider}']['OIDC_CLIENT_ID'],
                  client_secret='%s' % qiita_config.oidc_clients[f'{provider}']['OIDC_CLIENT_SECRET'],
                  response_type='code',
-                 scope=['openid']  # this was missing!
+                 scope=['openid']
             )
     post = get
    

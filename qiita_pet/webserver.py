@@ -106,7 +106,7 @@ class Application(tornado.web.Application):
         handlers = [
             (r"/", MainHandler),
             (r"/auth/login/", AuthLoginHandler),
-            (r"/auth/login_OIDC/", AuthLoginOIDCHandler),
+            (r"/auth/login_OIDC/(.*)/", AuthLoginOIDCHandler),
             (r"/auth/logout/", AuthLogoutHandler),
             (r"/auth/create/", AuthCreateHandler),
             (r"/auth/verify/(.*)", AuthVerifyHandler),

@@ -469,8 +469,8 @@
                     <p>Please Login via your preferred OIDC Identity Provider</p>
                     <div style="display: inline-flex;">
                       {% for client in oidc_clients %}
-                        <form action="{% raw qiita_config.portal_dir %}/auth/login_OIDC/" method="post">
-                        <button type="submit" class="btn btn-success" name="{{client}}">OIDC Login {{client}}</button>
+                        <form action="{% raw qiita_config.portal_dir %}/auth/login_OIDC/login/" method="post">
+                        <button type="submit" class="btn btn-success" name="{{client}}">{{client}}</button>
                       {% end %}
                     </div>  
                     <p>   </p>           
