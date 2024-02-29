@@ -245,6 +245,40 @@ class User(qdb.base.QiitaObject):
             return cls(email)
 
     @classmethod
+    def create_oidc(cls, email):
+        """ Creates a new user on the database based on email supplied by the Identity Provider
+
+        Parameters
+        ----------
+        email : str
+            The user's email fetched from the User Info of the Identity Provider upon successful authentication.
+
+        Raises
+        ------
+        IncorrectEmailError
+            Email string given is not a valid email
+        """
+        if not validate_email(email):
+            raise IncorrectEmailError("Bad email given: %s" % email)
+        info = {}
+        info['email'] = email
+        info['password'] = "authorization_pending"
+        qdb.util.check_table_cols(info, cls._table)
+        columns = info.keys()
+        values = [info[col] for col in columns]
+
+        # create user
+        sql = "INSERT INTO qiita.{0} ({1}) VALUES ({2})".format(
+            cls._table, ','.join(columns), ','.join(['%s'] * len(values)))
+        
+        qdb.sql_connection.TRN.add(sql, values)
+
+        qdb.sql_connection.TRN.execute()
+
+        return cls(email)
+
+
+    @classmethod
     def verify_code(cls, email, code, code_type):
         """Verify that a code and email match
 
@@ -564,17 +598,6 @@ class User(qdb.base.QiitaObject):
                      ORDER BY message_time DESC"""
             qdb.sql_connection.TRN.add(sql, [self._id])
             return qdb.sql_connection.TRN.execute_fetchindex()
-
-    @property
-    def slurm_parameters(self):
-        "Returns the slumn parameters for this user given by its user level"
-        with qdb.sql_connection.TRN:
-            sql = """SELECT slurm_parameters
-                     FROM qiita.user_level
-                     JOIN qiita.qiita_user USING (user_level_id)
-                     WHERE email = %s"""
-            qdb.sql_connection.TRN.add(sql, [self._id])
-            return qdb.sql_connection.TRN.execute_fetchflatten()[0]
 
     # ------- methods ---------
     def user_artifacts(self, artifact_type=None):

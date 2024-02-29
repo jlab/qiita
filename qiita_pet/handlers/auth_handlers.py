@@ -17,6 +17,7 @@ import urllib.parse
 import json
 
 from tornado.web import RequestHandler
+from tornado.web import authenticated
 from typing import Any, Dict
 import urllib.parse
 from tornado import escape, web
@@ -182,9 +183,6 @@ class AuthLoginHandler(BaseHandler):
     def set_current_user(self, user):
         if user:
             self.set_secure_cookie("user", json_encode(user), SameSite=None)
-            h = open("/home/qiita/Qiita/test_user_normallogin.txt", "a")
-            h.write(str(user)+ "\n")
-            h.close()
         else:
             self.clear_cookie("user")
 
@@ -229,7 +227,7 @@ class KeycloakMixin(OAuth2Mixin):
 class AuthLoginOIDCHandler(BaseHandler, KeycloakMixin):
     SUPPORTED_METHODS = ("CONNECT", "GET", "HEAD", "POST", "DELETE", "PATCH", "PUT", "OPTIONS")
 
-    async def get(self, args):
+    async def get(self, login):
         code = self.get_argument('code', False)
         if code:
             # get OIDC IP from URI
@@ -256,21 +254,26 @@ class AuthLoginOIDCHandler(BaseHandler, KeycloakMixin):
             user_info_res = await http_client.fetch(user_info_req, raise_error=False)
             user_info_res_json = json.loads(user_info_res.body.decode('utf8', 'replace'))
             print("  user info: %s" % user_info_res, file=sys.stderr)
-            self.set_secure_cookie("user", user_info_res_json['email'])
-            self.set_secure_cookie("token", access_token)
+            username = user_info_res_json['email']
 
+            if not User.exists(username):
+                self.create_new_user(username)
+            else:
+                self.not_verified(username)
+
+                self.set_secure_cookie("user", username)
+                self.set_secure_cookie("token", access_token)
 
             self.redirect('%s/' % qiita_config.base_url)
+
+
         else:
-            try:
-                #fetch requested client name from button call
-                for client in qiita_config.oidc_clients.keys():
-                    if self.get_argument(f'{client}', None) is not None:
-                        provider = client
-                    else:
-                        pass
-            except ValueError:
-                raise web.HTTPError(400, "failed to fetch client name")
+            #fetch requested client name from button call
+            for client in qiita_config.oidc_clients.keys():
+                if self.get_argument(f'{client}', None) is not None:
+                    provider = client
+                else:
+                    pass
 
             self.authorize_redirect(
                  redirect_uri='%s/auth/login_OIDC/%s' % (qiita_config.base_url, provider),
@@ -281,7 +284,49 @@ class AuthLoginOIDCHandler(BaseHandler, KeycloakMixin):
             )
     post = get
    
+    @execute_as_transaction
+    def create_new_user(self, username):
+        try:
+            created = User.create_oidc(username)
+        except QiitaDBDuplicateError:
+            msg = "Email already registered as a user"
+        if created:
+            try:
+                # qiita_config.base_url doesn't have a / at the end, but the
+                # qiita_config.portal_dir has it at the beginning but not at
+                # the end. This constructs the correct URL
+                msg = (f"<h3>User Successfully Registered!</h3><p>Your Qiita account "
+                            "has been successfully registered using the email address provided by your "
+                            "chosen identity provider. Your account is now awaiting authorization "
+                            "by a Qiita admin.</p>"
+                            "<p>If you have any questions regarding the authorization process, please email us at <a "
+                            "href=\"mailto:qiita.help@gmail.com\">qiita.help@gmail.com"
+                            "</a>.</p>")
 
+                self.redirect(u"%s/?level=success&message=%s" %
+                            (qiita_config.portal_dir, url_escape(msg)))
+            except Exception:
+                msg = ("Unable to create account. Please contact the "
+                                "qiita developers at <a href='mailto:qiita.help"
+                                "@gmail.com'>qiita.help@gmail.com</a>")
+                self.redirect(u"%s/?level=danger&message=%s"
+                             % (qiita_config.portal_dir, url_escape(msg)))
+                return
+        else:
+            error_msg = u"?error=" + url_escape(msg)
+            self.redirect(u"%s/%s"
+                            % (qiita_config.portal_dir, error_msg))
+    
+    def not_verified(self, username):
+        user = User(username)
+        if user.level == "unverified":
+            msg = ("You are not yet verified by an admin. Please wait or contact the "
+                                "qiita developers at <a href='mailto:qiita.help"
+                                "@gmail.com'>qiita.help@gmail.com</a>")
+            self.redirect(u"%s/?level=danger&message=%s"
+                             % (qiita_config.portal_dir, url_escape(msg)))
+        else:
+            return      
 
 class AuthLogoutHandler(BaseHandler):
     """Logout handler, no page necessary"""
