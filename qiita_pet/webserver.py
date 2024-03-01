@@ -20,7 +20,7 @@ from qiita_core.util import is_test_environment
 from qiita_pet.handlers.base_handlers import (
     MainHandler, NoPageHandler, IFrame)
 from qiita_pet.handlers.auth_handlers import (
-    AuthCreateHandler, AuthLoginHandler, AuthLoginOIDCHandler, AuthLogoutHandler, AuthVerifyHandler)
+    AuthCreateHandler, AuthLoginHandler, AuthLoginOIDCHandler, AuthLogoutHandler, AuthVerifyHandler, AdminOIDCUserAuthorization, AdminOIDCUserAuthorizationAjax)
 from qiita_pet.handlers.user_handlers import (
     ChangeForgotPasswordHandler, ForgotPasswordHandler, UserProfileHandler,
     UserMessagesHander, UserJobs)
@@ -106,7 +106,7 @@ class Application(tornado.web.Application):
         handlers = [
             (r"/", MainHandler),
             (r"/auth/login/", AuthLoginHandler),
-            (r"/auth/login_OIDC/(.*)/", AuthLoginOIDCHandler),
+            (r"/auth/login_OIDC/(.*)", AuthLoginOIDCHandler),
             (r"/auth/logout/", AuthLogoutHandler),
             (r"/auth/create/", AuthCreateHandler),
             (r"/auth/verify/(.*)", AuthVerifyHandler),
@@ -136,6 +136,8 @@ class Application(tornado.web.Application):
             (r"/admin/processing_jobs/", AdminProcessingJob),
             (r"/admin/processing_jobs/list", AJAXAdminProcessingJobListing),
             (r"/admin/sample_validation/", SampleValidation),
+            (r"/admin/user_authorization/", AdminOIDCUserAuthorization),
+            (r"/admin/user_authorizationAjax/", AdminOIDCUserAuthorizationAjax),
             (r"/ebi_submission/(.*)", EBISubmitHandler),
             # Study handlers
             (r"/study/create/", StudyEditHandler),

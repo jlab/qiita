@@ -8,28 +8,31 @@
 
 from tornado.escape import url_escape, json_encode
 from tornado.auth import OAuth2Mixin
+import warnings
 
 import sys
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
 import os
 
 import urllib.parse
-import json
 
 from tornado.web import RequestHandler
-from tornado.web import authenticated
+from tornado.web import authenticated, HTTPError
 from typing import Any, Dict
 import urllib.parse
 from tornado import escape, web
 
 import json
+from json import dumps
 
 
 from qiita_pet.handlers.base_handlers import BaseHandler
+from qiita_pet.handlers.portal import PortalEditBase
 from qiita_core.qiita_settings import qiita_config, r_client
 from qiita_core.util import execute_as_transaction
 from qiita_core.exceptions import (IncorrectPasswordError, IncorrectEmailError,
                                    UnverifiedEmailError)
+import qiita_db as qdb
 from qiita_db.util import send_email
 from qiita_db.user import User
 from qiita_db.exceptions import (QiitaDBUnknownIDError, QiitaDBDuplicateError,
@@ -327,6 +330,67 @@ class AuthLoginOIDCHandler(BaseHandler, KeycloakMixin):
                              % (qiita_config.portal_dir, url_escape(msg)))
         else:
             return      
+
+class AdminOIDCUserAuthorization(PortalEditBase):
+    """User Verification for Qiita-Account Creation following OIDC Login"""
+    @authenticated
+    @execute_as_transaction
+    def get(self):
+        self.check_admin()
+        headers=["email"]
+        self.render('admin_user_authorization.html', headers=headers, submit_url="/admin/user_authorization/")
+        #self.render('admin_user_authorization.html')
+        
+    def post(self):
+        self.check_admin()
+        users = map(str, self.get_arguments('selected'))
+        action = self.get_argument('action')
+        for user in users:
+            try:
+                with warnings.catch_warnings(record=True) as warns:
+                    if action == "Add":
+                        self.authorize_user(user)
+                    elif action == "Remove":
+                        user_to_delete = User(user)
+                        user_to_delete.delete(user)
+                    else:
+                        raise HTTPError(400, reason="Unknown action: %s" % action)
+            except QiitaDBError as e:
+                self.write(action.upper() + " ERROR:<br/>" + str(e))
+                return
+
+        msg = '; '.join([str(w.message) for w in warns])
+        self.write(action + " completed successfully<br/>" + msg)
+
+    @authenticated
+    @execute_as_transaction
+    def authorize_user(self, user):
+
+        self.check_admin()
+        with qdb.sql_connection.TRN:
+            sql = "UPDATE qiita.qiita_user SET user_level_id='4' where email='%s'" % user
+            qdb.sql_connection.TRN.add(sql)
+            qdb.sql_connection.TRN.execute()
+        return
+
+class AdminOIDCUserAuthorizationAjax(PortalEditBase):
+    @authenticated
+    @execute_as_transaction
+    def get(self):
+        self.check_admin()
+        with qdb.sql_connection.TRN:
+            sql = """SELECT email
+                     FROM qiita.qiita_user
+                     WHERE user_level_id='5'"""
+            qdb.sql_connection.TRN.add(sql)
+            users =  qdb.sql_connection.TRN.execute_fetchflatten()
+        result = []
+        for user in users:
+            user_unit = {}
+            user_unit['email'] = user
+            result.append(user_unit)
+        self.write(dumps(result))
+
 
 class AuthLogoutHandler(BaseHandler):
     """Logout handler, no page necessary"""
