@@ -336,15 +336,17 @@ class AdminOIDCUserAuthorization(PortalEditBase):
     @authenticated
     @execute_as_transaction
     def get(self):
+        #render page and transfer headers to be included for the table
         self.check_admin()
         headers=["email","name","affiliation","address", "phone"]
         self.render('admin_user_authorization.html', headers=headers, submit_url="/admin/user_authorization/")
-        #self.render('admin_user_authorization.html')
         
     def post(self):
+        #check if logged in user is admin and fetch all checked boxes as well as the action 
         self.check_admin()
         users = map(str, self.get_arguments('selected'))
         action = self.get_argument('action')
+        #depending on the action either autorize (add) user or delete user from db (remove)
         for user in users:
             try:
                 with warnings.catch_warnings(record=True) as warns:
@@ -358,13 +360,13 @@ class AdminOIDCUserAuthorization(PortalEditBase):
             except QiitaDBError as e:
                 self.write(action.upper() + " ERROR:<br/>" + str(e))
                 return
-
         msg = '; '.join([str(w.message) for w in warns])
         self.write(action + " completed successfully<br/>" + msg)
 
     @authenticated
     @execute_as_transaction
     def authorize_user(self, user):
+        #authorize user by verifying login manually using tue standard Qiita verify function
         self.check_admin()
         User.verify_code(user, User(user).info['user_verify_code'], "create")
         return
@@ -373,6 +375,7 @@ class AdminOIDCUserAuthorizationAjax(PortalEditBase):
     @authenticated
     @execute_as_transaction
     def get(self):
+        #retrieving users with an unverified level
         self.check_admin()
         with qdb.sql_connection.TRN:
             sql = """SELECT email,name,affiliation,address,phone
@@ -381,6 +384,7 @@ class AdminOIDCUserAuthorizationAjax(PortalEditBase):
             qdb.sql_connection.TRN.add(sql)
             users =  qdb.sql_connection.TRN.execute()[1:]
         result = []
+        #fetching information for each user
         for list in users:
             for user in list:
                 usermail = user[0]
@@ -391,6 +395,7 @@ class AdminOIDCUserAuthorizationAjax(PortalEditBase):
                 user_unit['address'] = User(usermail).info['address']
                 user_unit['phone'] = User(usermail).info['phone']
                 result.append(user_unit)
+        #returning information as JSON
         self.write(dumps(result))
 
 

@@ -261,8 +261,10 @@ class User(qdb.base.QiitaObject):
         if not validate_email(email):
             raise IncorrectEmailError("Bad email given: %s" % email)
         info = {}
+        #email and password are minimal needed information, password indicates OIDC user registration purely for admins
         info['email'] = email
         info['password'] = "not_necessary_due_to_OIDC"
+        #verify code is necessary to manually authorize users on the admin page
         info['user_verify_code'] = "OIDC"
         qdb.util.check_table_cols(info, cls._table)
         columns = info.keys()
