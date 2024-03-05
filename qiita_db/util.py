@@ -2288,21 +2288,21 @@ def send_email(to, subject, body):
     msg.attach(MIMEText(body, 'plain'))
 
     # connect to smtp server, using ssl if needed
-    if qiita_config.smtp_ssl:
-        smtp = SMTP_SSL()
-    else:
-        smtp = SMTP()
-    smtp.set_debuglevel(False)
-    smtp.connect(qiita_config.smtp_host, qiita_config.smtp_port)
+    #if qiita_config.smtp_ssl:
+    #    smtp = SMTP_SSL()
+    #else:
+    #    smtp = SMTP()
+    #smtp.set_debuglevel(False)
+    #smtp.connect(qiita_config.smtp_host, qiita_config.smtp_port)
     # try tls, if not available on server just ignore error
-    try:
-        smtp.starttls()
-    except SMTPException:
-        pass
+    #try:
+    #    smtp.starttls()
+    #except SMTPException:
+    #    pass
+    smtp = SMTP(qiita_config.smtp_host, qiita_config.smtp_port)
     smtp.ehlo_or_helo_if_needed()
-
-    if qiita_config.smtp_user:
-        smtp.login(qiita_config.smtp_user, qiita_config.smtp_password)
+    #if qiita_config.smtp_user:
+    #    smtp.login(qiita_config.smtp_user, qiita_config.smtp_password)
 
     # send email
     try:
