@@ -73,7 +73,7 @@ $(document).ready(function() {
     "deferRender": true,
     "iDisplayLength": 50,
     "oLanguage": {
-      "sZeroRecords": "No studies belong to selected portal"
+      "sZeroRecords": "No users are waiting to be authorized."
     },
     "columns": [
       {"className": 'select', "data": null},
@@ -97,7 +97,7 @@ $(document).ready(function() {
   <div class='col-lg-12' style="background-color: #FFF;">
         <form role="form" id="user-form">
         <input type="hidden" name="action" id="action" value="">
-        <input type="button" id="add-button" value="Add" class="btn btn-sm btn-success" onclick="check_submit('Add')"> <input type="button" id="remove-button" value="Remove" class="btn btn-sm btn-danger" onclick="check_submit('Remove')">
+        <input type="button" id="add-button" value="Authorize Users" class="btn btn-sm btn-success" onclick="check_submit('Add')"> <input type="button" id="remove-button" value="Remove Users from Qiita Database" class="btn btn-sm btn-danger" onclick="check_submit('Remove')">
         </form>
   </div>
 </div>
@@ -108,7 +108,9 @@ $(document).ready(function() {
     <thead>
       <tr>
         <td>Select</td>
-        <td>Users</td>
+        {% for head in headers %}
+        <td>{{head}}</td>
+        {% end %}
       </tr>
     </thead>
     <tbody>

@@ -262,7 +262,8 @@ class User(qdb.base.QiitaObject):
             raise IncorrectEmailError("Bad email given: %s" % email)
         info = {}
         info['email'] = email
-        info['password'] = "authorization_pending"
+        info['password'] = "not_necessary_due_to_OIDC"
+        info['user_verify_code'] = "OIDC"
         qdb.util.check_table_cols(info, cls._table)
         columns = info.keys()
         values = [info[col] for col in columns]

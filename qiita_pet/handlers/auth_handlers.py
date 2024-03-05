@@ -337,7 +337,7 @@ class AdminOIDCUserAuthorization(PortalEditBase):
     @execute_as_transaction
     def get(self):
         self.check_admin()
-        headers=["email"]
+        headers=["email","name","affiliation","address", "phone"]
         self.render('admin_user_authorization.html', headers=headers, submit_url="/admin/user_authorization/")
         #self.render('admin_user_authorization.html')
         
@@ -365,12 +365,8 @@ class AdminOIDCUserAuthorization(PortalEditBase):
     @authenticated
     @execute_as_transaction
     def authorize_user(self, user):
-
         self.check_admin()
-        with qdb.sql_connection.TRN:
-            sql = "UPDATE qiita.qiita_user SET user_level_id='4' where email='%s'" % user
-            qdb.sql_connection.TRN.add(sql)
-            qdb.sql_connection.TRN.execute()
+        User.verify_code(user, User(user).info['user_verify_code'], "create")
         return
 
 class AdminOIDCUserAuthorizationAjax(PortalEditBase):
@@ -379,16 +375,22 @@ class AdminOIDCUserAuthorizationAjax(PortalEditBase):
     def get(self):
         self.check_admin()
         with qdb.sql_connection.TRN:
-            sql = """SELECT email
+            sql = """SELECT email,name,affiliation,address,phone
                      FROM qiita.qiita_user
                      WHERE user_level_id='5'"""
             qdb.sql_connection.TRN.add(sql)
-            users =  qdb.sql_connection.TRN.execute_fetchflatten()
+            users =  qdb.sql_connection.TRN.execute()[1:]
         result = []
-        for user in users:
-            user_unit = {}
-            user_unit['email'] = user
-            result.append(user_unit)
+        for list in users:
+            for user in list:
+                usermail = user[0]
+                user_unit = {}
+                user_unit['email'] = User(usermail).email
+                user_unit['name'] = User(usermail).info['name']
+                user_unit['affiliation'] = User(usermail).info['affiliation']
+                user_unit['address'] = User(usermail).info['address']
+                user_unit['phone'] = User(usermail).info['phone']
+                result.append(user_unit)
         self.write(dumps(result))
 
 
