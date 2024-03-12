@@ -65,6 +65,9 @@
                     Raw files {% if prep['start_artifact'] in ('SFF', 'per_sample_FASTQ', 'FASTA', 'FASTQ') %}<i class="fa fa-check green"></i>{% else %}<i class="fa fa-times red"></i>{% end %}, processed {% if prep['num_artifact_children'] > 0 %}<i class="fa fa-check green"></i> {% if prep['num_artifact_children'] > 1 %} <i class="fa fa-check green"></i>{% end%}{% else %}<i class="fa fa-times red"></i>{% end %}, BIOM {% if prep['youngest_artifact_type'] == 'BIOM' %}<i class="fa fa-check green"></i>{% else %}<i class="fa fa-times red"></i>{% end %}
                   <br />
                   Created: {{prep['creation_timestamp'].strftime('%B %-d, %Y')}}, last updated: {{prep['modification_timestamp'].strftime('%B %-d, %Y')}}
+                  {% if prep['id'] in rep_wordclouds %}
+                    <img src="{% raw qiita_config.portal_dir %}/download/{{rep_wordclouds[prep['id']]['fp_id']}}" style="width: 100%; height: auto;"/>
+                  {% end %}
                 </a>
               </div>
             {% end %}

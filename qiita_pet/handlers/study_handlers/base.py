@@ -14,7 +14,8 @@ from qiita_pet.handlers.util import to_int, doi_linkifier, pubmed_linkifier
 from qiita_pet.handlers.base_handlers import BaseHandler
 from qiita_pet.handlers.api_proxy import (
     study_prep_get_req, study_get_req, study_delete_req, study_tags_request,
-    study_patch_request, study_get_tags_request, study_files_get_req)
+    study_patch_request, study_get_tags_request, study_files_get_req,
+    study_get_rep_wordclouds_req)
 
 
 class StudyIndexHandler(BaseHandler):
@@ -103,6 +104,10 @@ class DataTypesMenuAJAX(BaseHandler):
         study_id = to_int(self.get_argument('study_id'))
         # Retrieve the prep template information for the menu
         prep_info = study_prep_get_req(study_id, self.current_user.id)
+        # Retrieve one representative WordCloud per prep
+        rep_wordclouds = study_get_rep_wordclouds_req(
+            study_id, self.current_user.id)
+
         # Make sure study exists
         if prep_info['status'] != 'success':
             raise HTTPError(404, reason=prep_info['message'])
@@ -110,7 +115,7 @@ class DataTypesMenuAJAX(BaseHandler):
         prep_info = prep_info['info']
 
         self.render('study_ajax/data_type_menu.html', prep_info=prep_info,
-                    study_id=study_id)
+                    study_id=study_id, rep_wordclouds=rep_wordclouds)
 
 
 class StudyFilesAJAX(BaseHandler):

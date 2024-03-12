@@ -184,6 +184,111 @@ def study_delete_req(study_id, user_id):
     return {'status': 'success', 'message': ''}
 
 
+def study_get_rep_wordclouds_req(study_id, user_id):
+    """Chooses one WordCloud per preparation of the study to be representative
+
+    Parameters
+    ----------
+    study_id : int
+        Study id for which representative WordClouds shall be returned
+    user_id : str
+        User id requesting the representative WordClouds
+
+    Returns
+    -------
+    dict
+        Representative WordCloud Artifacts in the format
+        {'artifact': WordCloud artifact object,
+         'fp_id': File ID to the bitmap image of the word cloud}
+
+    Notes
+    -----
+    A study can have multiple preparations of different types, e.g. three
+    preparations for 16S, one for 18S, ... We intent to represent each of these
+    preparations by excatly one WordCloud, however a preparation can contain
+    multiple WordClouds, e.g. for the 'deblur reference hit table' as well as
+    the 'deblur all table' or for different trim lengths.
+    Should multiple WordClouds be available, we pick one by personal
+    preference, which is currently (2024-03-12)
+    a) prefer 150nt trim length (due to good trade off between high quality
+       base-calls and phylogenetic resolution) over all others, if not
+       available pick longest trim length and
+    b) prefer 'reference hit table' over 'all table' (as ASVs have been
+       checked against a positive 16-like filter)
+    """
+
+    # obtain study object from numeric ID
+    access_error = check_access(study_id, user_id)
+    if access_error:
+        return access_error
+    study = Study(study_id)
+
+    # 1) collect alternative WordClouds per preparation
+    wordclouds = dict()
+    # iterate through all artifacts of the study - regardless of prep - that
+    # are of type WordCloud
+    for artifact in study.artifacts(artifact_type="WordCloud"):
+        # an artifact can have multiple parents - should not be the case for
+        # wordclouds
+        for parent_artifact in artifact.parents:
+            # get trim length of sequences for deblur
+            seq_length = None
+            for grandparent_artifact in parent_artifact.parents:
+                # deblur should have only operated on trimmed demultiplexed
+                # sequences
+                if grandparent_artifact.artifact_type != 'Demultiplexed':
+                    continue
+                if grandparent_artifact.name != 'Trimmed Demultiplexed':
+                    continue
+                curr_seq_len = int(
+                    grandparent_artifact.processing_parameters.values.get(
+                        'length'))
+                if seq_length is not None and curr_seq_len != seq_length:
+                    raise ValueError("Input artifacts for 'deblur' seem to "
+                                     "have different sequence lengths?!")
+                seq_length = curr_seq_len
+
+            # an artifact might belong to multiple preperations
+            for prep in artifact.prep_templates:
+                if prep.id not in wordclouds:
+                    wordclouds[prep.id] = []
+                wordclouds[prep.id].append({
+                    'seq_len': seq_length,
+                    'origin': parent_artifact.name,
+                    'artifact': artifact})
+
+    # 2) select one of potentially many WordClouds as representative per
+    #    preparation
+    representative_wordclouds = dict()
+    for prep_id in wordclouds:
+        preferred_seqlen = 150  # SMJ personal preference!
+
+        avail_seqlens = {wc['seq_len'] for wc in wordclouds[prep_id]}
+        if preferred_seqlen not in avail_seqlens:
+            preferred_seqlen = sorted(list(avail_seqlens), reverse=True)[0]
+        candidates = [wc for wc in wordclouds[prep_id]
+                      if wc['seq_len'] == preferred_seqlen]
+
+        # SMJ: prefer reference hit over all table, as non 16S like ASVs are
+        # excluded
+        preferred_origin = 'deblur reference hit table'
+        avail_origins = {wc['origin'] for wc in candidates}
+        if preferred_origin not in avail_origins:
+            # probably not the best criterion to make a selection, but during
+            # coding the only alternative in Qiita was "deblur all table"
+            preferred_origin = sorted(list(avail_origins))
+        candidates = [wc for wc in candidates
+                      if wc['origin'] == preferred_origin]
+
+        rep_wc = candidates[0]['artifact']
+        representative_wordclouds[prep_id] = {
+            'artifact': rep_wc,
+            'fp_id': [file['fp_id'] for file in rep_wc.filepaths
+                      if file['fp_type'] == 'image_bitmap'][0]}
+
+    return representative_wordclouds
+
+
 def study_prep_get_req(study_id, user_id):
     """Gives a summary of each prep template attached to the study
 

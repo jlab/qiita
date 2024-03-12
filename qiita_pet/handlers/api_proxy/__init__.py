@@ -25,7 +25,7 @@ from .prep_template import (
 from .studies import (
     data_types_get_req, study_get_req, study_prep_get_req, study_delete_req,
     study_files_get_req, study_patch_request, study_get_tags_request,
-    study_tags_request)
+    study_tags_request, study_get_rep_wordclouds_req)
 from .artifact import (artifact_graph_get_req, artifact_types_get_req,
                        artifact_post_req, artifact_get_req,
                        artifact_status_put_req, artifact_get_prep_req,
@@ -56,7 +56,7 @@ __all__ = ['prep_template_summary_get_req', 'data_types_get_req',
            'sample_template_category_get_req', 'new_prep_template_get_req',
            'study_files_get_req', 'prep_template_ajax_get_req',
            'study_tags_request', 'study_patch_request',
-           'study_get_tags_request',
+           'study_get_tags_request', 'study_get_rep_wordclouds_req',
            'prep_template_patch_req', 'ontology_patch_handler',
            'list_commands_handler_get_req',
            'list_options_handler_get_req', 'workflow_handler_post_req',
