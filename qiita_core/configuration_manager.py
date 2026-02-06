@@ -484,12 +484,12 @@ class ConfigurationManager(object):
         """
         sec_get = partial(config.get, 'kubernetes')
 
-        self.k8s_volume_mount_path = sec_get('VOLUME_MOUNT_PATH')
-        self.k8s_volume_name = sec_get('VOLUME_NAME')
-        self.k8s_pvc_name = sec_get('PVC_NAME')
+        self.k8s_volume_mount_path = sec_get('VOLUME_MOUNT_PATH', fallback=None)
+        self.k8s_volume_name = sec_get('VOLUME_NAME', fallback=None)
+        self.k8s_pvc_name = sec_get('PVC_NAME', fallback=None)
 
         self.k8s_image_pull_policy = sec_get('IMAGE_PULL_POLICY', fallback='IfNotPresent')
-        self.k8s_image_pull_secrets = sec_get('IMAGE_PULL_SECRETS')
+        self.k8s_image_pull_secrets = sec_get('IMAGE_PULL_SECRETS', fallback=None)
 
-        self.k8s_namespace = sec_get('NAMESPACE')
+        self.k8s_namespace = sec_get('NAMESPACE', fallback=None)
     
