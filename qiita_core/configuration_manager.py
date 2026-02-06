@@ -207,6 +207,7 @@ class ConfigurationManager(object):
         self._get_portal(config)
         self._iframe(config)
         self._get_oidc(config)
+        self._get_k8s(config)
 
     def _get_main(self, config):
         """Get the configuration of the main section"""
