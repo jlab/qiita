@@ -153,6 +153,24 @@ class ConfigurationManager(object):
         Optional. Name of a file in qiita_pet/static/img that shall be
         displayed for login through Service Provider, instead of a plain
         button
+    k8s_image_pull_policy : str
+        Pull policy for images used in kubernetes plugin jobs. 
+    k8s_volume_mount_path : str
+        Mount path for qiita-data directory in kubernetes setup. Must match the
+        path set in the qiita.yaml under volumeMounts.
+    k8s_volume_name : str
+        Volume name for qiita-data directory in kubernetes setup. Must match the
+        name set in the qiita.yaml under volumeMounts.
+    k8s_pvc_name : str
+        Name of the persistent volume claim used for qiita-data in kubernetes. Must 
+        match the name set in pvc_nfs_qiita.yaml
+    k8s_image_pull_secrets : str
+        Currently not optional. Will be once we switch to the "public" harbor images.
+    k8s_namespace : str
+        Namespace used to send jobs. Must match namespace qiita deployment is running in.
+    
+
+    
 
     Raises
     ------
@@ -457,3 +475,20 @@ class ConfigurationManager(object):
                     provider['scope'] = 'openid %s' % provider['scope']
                 provider['logo'] = config.get(
                     section_name, 'LOGO', fallback=None)
+    
+    def _get_k8s(self, config):
+        """
+        Parse configutations for the kubernetes section. This will
+        impact where and how future plugin jobs are run.
+        """
+        sec_get = partial(config.get, 'kubernetes')
+
+        self.k8s_volume_mount_path = sec_get('VOLUME_MOUNT_PATH')
+        self.k8s_volume_name = sec_get('VOLUME_NAME')
+        self.k8s_pvc_name = sec_get('PVC_NAME')
+
+        self.k8s_image_pull_policy = sec_get('IMAGE_PULL_POLICY', fallback='IfNotPresent')
+        self.k8s_image_pull_secrets = sec_get('IMAGE_PULL_SECRETS')
+
+        self.k8s_namespace = sec_get('NAMESPACE')
+    
