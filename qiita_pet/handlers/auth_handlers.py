@@ -30,6 +30,7 @@ from qiita_db.exceptions import (
 )
 from qiita_db.user import User
 from qiita_db.util import send_email
+from qiita_db.logger import LogEntry
 from qiita_pet.handlers.base_handlers import BaseHandler
 
 # login code modified from https://gist.github.com/guillaumevincent/4771570
