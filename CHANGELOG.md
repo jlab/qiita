@@ -1,5 +1,42 @@
 # Qiita changelog
 
+
+Version 2026.01
+---------------
+
+Deployed on January 9th, 2026
+
+* `ArtifactHandler` also returns the parents ids, if they exits; this can be used by any plugin.
+*  `ruff` replaces `flake8`.
+* `build_analysis_files` now allows creation of a new `Analysis` without automatically submitting a job.
+* `Analysis.add_samples` now accepts new samples after creation; before it was only possible via the default_analysis.
+* Introduction of Qiita-wide unique identifiers for [study, prep and artifact](https://github.com/qiita-spots/qiita/pull/3499). Thank you @wasade!
+* New commands available in `qp-pacbio`: `PacBio adapter removal via lima/pbmarkdup`, `Woltka v0.1.7 with cov and id filter`, `Feature Table from LCG/MAG` and `Remove SynDNA plasmid, insert, & GCF_000184185 reads (minimap2)` (deployed on December 3rd, 2025); also deprecated `Woltka v0.1.7, minimap2`. [More information](https://github.com/qiita-spots/qp-pacbio).
+
+
+Version 2025.11
+---------------
+
+Deployed on Novermber 25th, 2025
+
+* Updated `qp-knight-lab-processing` to add support of PacBio raw data processing that has twisted adaptors, including human-filtering using MOVI. Also, replaced flake8 for ruff. Additionally, added `IsPairedEndComplete` as part of the Illumina xml validation process.
+* Added a new plugin to the system: `https://github.com/qiita-spots/qp-pacbio`, which adds two new commands: `Woltka v0.1.7, minimap2` and `PacBio processing`.
+* Added default workflows specific to PacBio.
+* Allowed default workflows to have multiple commands starting from a single input. 
+* Now users can download public raw and biom per-preparation directly.
+* Initial changes for to support cloud environments via cloud specific endpoints; thank you @sjanssen2!
+
+
+Version 2025.09
+---------------
+
+Deployed on September 11th, 2025
+
+* Updated `qp-knight-lab-processing` to add support of PacBio raw data processing, including human-filtering using MOVI.
+* Updated fastp in local environment for `qp-knight-lab-processing` from 0.20.1 to 0.23.4.
+* Added workflows parameters to the default workfows in Qiita to make them Illumina specific: `UPDATE qiita.default_workflow set parameters = '{"prep": {"platform": "Illumina"}, "sample": {}}'::json WHERE default_workflow_id IN (4, 6, 9 ,11);` to avoid PacBio processing applying them.
+
+
 Version 2025.07
 ---------------
 
