@@ -209,8 +209,25 @@ class AuthLogoutHandler(BaseHandler):
     """Logout handler, no page necessary"""
 
     def get(self):
+        # clear cookie information
         self.clear_cookie("user")
-        self.redirect("%s/" % qiita_config.portal_dir)
+        # the identity provider IF user logged in via third party OIDC
+        oidc_logout_url = self.get_secure_cookie("logout_url")
+        if oidc_logout_url:
+            # token of the session
+            id_token = self.get_secure_cookie("id_token").decode("utf-8")
+            # clear cookie information, only present when logged in through
+            # OIDC
+            self.clear_cookie("logout_url")
+            self.clear_cookie("id_token")
+            # global logout via OIDC
+            self.redirect('%s?id_token_hint=%s&post_logout_redirect_uri=%s' % (
+                oidc_logout_url.decode("utf-8"),
+                id_token,
+                "%s/" % qiita_config.base_url))
+        else:
+            # local logout for Qiita
+            self.redirect("%s/" % qiita_config.portal_dir)
 
 
 class KeycloakMixin(OAuth2Mixin):
@@ -300,6 +317,7 @@ class AuthLoginOIDCHandler(BaseHandler, KeycloakMixin):
         self._OAUTH_AUTHORIZE_URL = idp_config['authorization_endpoint']
         self._OAUTH_ACCESS_TOKEN_URL = idp_config['token_endpoint']
         self._OAUTH_USERINFO_URL = idp_config['userinfo_endpoint']
+        self._OAUTH_LOGOUT_URL = idp_config['end_session_endpoint']
 
         if code:
             # step 2: we got a code and now want to exchange it for a user
@@ -335,6 +353,10 @@ class AuthLoginOIDCHandler(BaseHandler, KeycloakMixin):
                         "from your identity provider '%s'") % self.idp)
 
                 username = user_info['email']
+                # store logout URL, which depends on used idp
+                self.set_secure_cookie("logout_url", self._OAUTH_LOGOUT_URL)
+                # necessary for proper redirect after logout
+                self.set_secure_cookie("id_token", access.get('id_token'))
                 if not User.exists(username):
                     self.create_new_user(username, user_info, self.idp)
                 else:
