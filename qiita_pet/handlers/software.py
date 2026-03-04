@@ -5,12 +5,14 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # -----------------------------------------------------------------------------
+from copy import deepcopy
+
 from tornado.gen import coroutine
 
 from qiita_core.util import execute_as_transaction
-from qiita_db.software import Software, DefaultWorkflow
+from qiita_db.software import DefaultWorkflow, Software
+
 from .base_handlers import BaseHandler
-from copy import deepcopy
 
 
 class SoftwareHandler(BaseHandler):
@@ -20,7 +22,7 @@ class SoftwareHandler(BaseHandler):
         # active True will only show active software
         active = True
         user = self.current_user
-        if user is not None and user.level in {'admin', 'dev'}:
+        if user is not None and user.level in {"admin", "dev"}:
             active = False
 
         software = Software.iter(active=active)
@@ -32,7 +34,7 @@ def _retrive_workflows(active):
     def _default_parameters_parsing(node):
         dp = node.default_parameter
         cmd = dp.command
-        cmd_name = 'params_%d' % node.id
+        cmd_name = "params_%d" % node.id
         rp = deepcopy(cmd.required_parameters)
         op = deepcopy(cmd.optional_parameters)
         params = dict()
@@ -46,15 +48,13 @@ def _retrive_workflows(active):
         inputs = []
         outputs = []
         for input in rp.values():
-            accepted_values = ' | '.join(input[1])
+            accepted_values = " | ".join(input[1])
             inputs.append([cmd.id, accepted_values])
         for output in cmd.outputs:
-            outputs.append([cmd.id, ' | '.join(output)])
-        fcmd_name = cmd.name if not cmd.naming_order else \
-            f'{cmd.name} | {dp.name}'
+            outputs.append([cmd.id, " | ".join(output)])
+        fcmd_name = cmd.name if not cmd.naming_order else f"{cmd.name} | {dp.name}"
 
-        return ([cmd_name, cmd.id, fcmd_name, dp.name, params],
-                inputs, outputs)
+        return ([cmd_name, cmd.id, fcmd_name, dp.name, params], inputs, outputs)
 
     workflows = []
     for w in DefaultWorkflow.iter(active=active):
@@ -74,6 +74,7 @@ def _retrive_workflows(active):
         # for easy look up and merge of output_names
         main_nodes = dict()
         not_used_nodes = {n.id: n for n in graph.nodes}
+        standalone_input = None
         for i, (x, y) in enumerate(graph.edges):
             if x.id in not_used_nodes:
                 del not_used_nodes[x.id]
@@ -83,16 +84,22 @@ def _retrive_workflows(active):
             vals_y, input_y, output_y = _default_parameters_parsing(y)
 
             connections = []
-            for a, _, c in graph[x][y]['connections'].connections:
+            for a, _, c in graph[x][y]["connections"].connections:
                 connections.append("%s | %s" % (a, c))
 
             if i == 0:
                 # we are in the first element so we can specifically select
                 # the type we are looking for
-                if at in input_x[0][1]:
+                if input_x and at in input_x[0][1]:
                     input_x[0][1] = at
+                elif input_x:
+                    input_x[0][1] = "** WARNING, NOT DEFINED **"
                 else:
-                    input_x[0][1] = '** WARNING, NOT DEFINED **'
+                    # if we get to this point it means that the workflow has a
+                    # multiple commands starting from the main single input,
+                    # thus is fine to link them to the same raw data
+                    standalone_input = vals_x[0]
+                    input_x = [["", at]]
 
             name_x = vals_x[0]
             name_y = vals_y[0]
@@ -101,18 +108,20 @@ def _retrive_workflows(active):
                 if name_x not in main_nodes:
                     main_nodes[name_x] = dict()
                 for a, b in input_x:
-                    name = 'input_%s_%s' % (name_x, b)
+                    name = "input_%s_%s" % (name_x, b)
                     if b in inputs:
                         name = inputs[b]
                     else:
-                        name = 'input_%s_%s' % (name_x, b)
+                        name = "input_%s_%s" % (name_x, b)
+                        if standalone_input is not None:
+                            standalone_input = name
                     vals = [name, a, b]
                     if vals not in nodes:
                         inputs[b] = name
                         nodes.append(vals)
                     edges.append([name, vals_x[0]])
                 for a, b in output_x:
-                    name = 'output_%s_%s' % (name_x, b)
+                    name = "output_%s_%s" % (name_x, b)
                     vals = [name, a, b]
                     if vals not in nodes:
                         nodes.append(vals)
@@ -134,13 +143,13 @@ def _retrive_workflows(active):
                 if b in main_nodes[name_x]:
                     name = main_nodes[name_x][b]
                 else:
-                    name = 'input_%s_%s' % (name_y, b)
+                    name = "input_%s_%s" % (name_y, b)
                     vals = [name, a, b]
                     if vals not in nodes:
                         nodes.append(vals)
                 edges.append([name, name_y])
             for a, b in output_y:
-                name = 'output_%s_%s' % (name_y, b)
+                name = "output_%s_%s" % (name_y, b)
                 vals = [name, a, b]
                 if vals not in nodes:
                     nodes.append(vals)
@@ -149,21 +158,25 @@ def _retrive_workflows(active):
 
         wparams = w.parameters
 
-        # adding nodes without edges
-        # as a first step if not_used_nodes is not empty we'll confirm that
-        # nodes/edges are empty; in theory we should never hit this
-        if not_used_nodes and (nodes or edges):
-            raise ValueError(
-                'Error, please check your workflow configuration')
+        # This case happens when a workflow has 2 commands from the initial
+        # artifact and one of them has more processing after
+        if not_used_nodes and (nodes or edges) and standalone_input is None:
+            standalone_input = edges[0][0]
 
         # note that this block is similar but not identical to adding connected
         # nodes
         for i, (_, x) in enumerate(not_used_nodes.items()):
             vals_x, input_x, output_x = _default_parameters_parsing(x)
-            if at in input_x[0][1]:
+            if input_x and at in input_x[0][1]:
                 input_x[0][1] = at
+            elif input_x:
+                input_x[0][1] = "** WARNING, NOT DEFINED **"
             else:
-                input_x[0][1] = '** WARNING, NOT DEFINED **'
+                # if we get to this point it means that these are "standalone"
+                # commands, thus is fine to link them to the same raw data
+                if standalone_input is None:
+                    standalone_input = vals_x[0]
+                input_x = [["", at]]
 
             name_x = vals_x[0]
             if vals_x not in (nodes):
@@ -172,20 +185,36 @@ def _retrive_workflows(active):
                     if b in inputs:
                         name = inputs[b]
                     else:
-                        name = 'input_%s_%s' % (name_x, b)
-                    nodes.append([name, a, b])
+                        name = "input_%s_%s" % (name_x, b)
+                    # if standalone_input == name_x then this is the first time
+                    # we are processing a standalone command so we need to add
+                    # the node and store the name of the node for future usage
+                    if standalone_input is None:
+                        nodes.append([name, a, b])
+                    elif standalone_input == name_x:
+                        nodes.append([name, a, b])
+                        standalone_input = name
+                    else:
+                        name = standalone_input
                     edges.append([name, vals_x[0]])
                 for a, b in output_x:
-                    name = 'output_%s_%s' % (name_x, b)
+                    name = "output_%s_%s" % (name_x, b)
                     nodes.append([name, a, b])
                     edges.append([name_x, name])
 
         workflows.append(
-            {'name': w.name, 'id': w.id, 'data_types': w.data_type,
-             'description': w.description, 'active': w.active,
-             'parameters_sample': wparams['sample'],
-             'parameters_prep': wparams['prep'],
-             'nodes': nodes, 'edges': edges})
+            {
+                "name": w.name,
+                "id": w.id,
+                "data_types": w.data_type,
+                "description": w.description,
+                "active": w.active,
+                "parameters_sample": wparams["sample"],
+                "parameters_prep": wparams["prep"],
+                "nodes": nodes,
+                "edges": edges,
+            }
+        )
 
     return workflows
 
@@ -197,7 +226,7 @@ class WorkflowsHandler(BaseHandler):
         # active True will only show active workflows
         active = True
         user = self.current_user
-        if user is not None and user.level in {'admin', 'dev'}:
+        if user is not None and user.level in {"admin", "dev"}:
             active = False
 
         workflows = _retrive_workflows(active)
