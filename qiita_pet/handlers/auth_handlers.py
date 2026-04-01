@@ -9,7 +9,7 @@
 import os
 import requests
 
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlencode
 
 from tornado.escape import json_encode, url_escape, json_decode
 from tornado.auth import OAuth2Mixin
@@ -265,7 +265,7 @@ class KeycloakMixin(OAuth2Mixin):
 
     async def get_authenticated_user(self, redirect_uri: str, code: str):
         http = self.get_auth_http_client()
-        body = urllib.parse.urlencode(
+        body = urlencode(
             {
                 "redirect_uri": redirect_uri,
                 "code": code,
