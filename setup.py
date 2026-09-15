@@ -149,6 +149,7 @@ setup(
         "iteration_utilities",
         "supervisor @ https://github.com/Supervisor/supervisor/archive/master.zip",
         "joblib",
+        "pycurl",
     ],
     classifiers=classifiers,
 )
