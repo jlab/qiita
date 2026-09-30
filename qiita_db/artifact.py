@@ -1466,6 +1466,36 @@ class Artifact(qdb.base.QiitaObject):
                                 iid = in_art.id
                                 if iid not in nodes and iid in extra_nodes:
                                     nodes[iid] = extra_nodes[iid]
+
+                                # With the qp-cofanpi plugin, we encounter for
+                                # the first time a situation where one
+                                # processing job (not an analysis, which can
+                                # only start from BIOM artifacts) needs
+                                # multiple input artifacts. The only way to
+                                # obtain a second input artifact
+                                # seems to be a second iteration preparation.
+                                # We thus need to
+                                #   a) provide artifacts from other
+                                #      preparations (same study) as inputs for
+                                #      processing commands, see qiita_pet/
+                                #      handlers/api_proxy/processing.py
+                                #   b) the injection of network nodes for these
+                                #      "external" artifacts here
+                                # We limit creation of new nodes to those edges
+                                # from input artifacts to jobs, where the input
+                                # artifact does not exist yet (obviously), the
+                                # job (regardless of status) exists and the
+                                # additonal input artifact is not self.
+                                # This will insert the additonal artifact + job
+                                # node to BOTH preparations, i.e. this and the
+                                # one where the additional artifacts stems
+                                # from. Artifacts/Jobs can be manipulated by
+                                # the user in both preps from then on.
+                                if (iid not in nodes) and \
+                                   (n_obj.id in nodes) and \
+                                   (in_art != self):
+                                    nodes[iid] = ("artifact", in_art)
+
                                 _add_edge(edges, nodes[iid], nodes[n_obj.id])
 
                             pending = n_obj.pending
