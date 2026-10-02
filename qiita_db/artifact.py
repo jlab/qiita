@@ -471,7 +471,7 @@ class Artifact(qdb.base.QiitaObject):
                     if len(dtypes) > 1:
                         data_type = "Multiomic"
                     else:
-                        data_type = dtypes[0]
+                        data_type = list(dtypes)[0]
 
                     instance = _common_creation_steps(
                         artifact_type,
