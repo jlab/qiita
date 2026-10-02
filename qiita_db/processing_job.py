@@ -1514,15 +1514,25 @@ class ProcessingJob(qdb.base.QiitaObject):
                 templates = set()
                 for artifact in self.input_artifacts:
                     templates.update(pt.id for pt in artifact.prep_templates)
-                template = None
+
                 analysis = None
+                # zero, one or a list of templates passed to the validator
+                # command:
+                # If ==0, be None to indicate analysis jobs
+                # If ==1, classical situation with one input prep for each
+                #         artifact
+                # If >1, new since qp-cofanpi: can operate on "genome" and
+                #        "per_sample_FASTQ". The validator of the output
+                #        artifact type needs to cope with a list as type
+                #        of parameters['template'] instead of a single int.
+                val_templates = None
+
                 if len(templates) > 1:
-                    raise qdb.exceptions.QiitaDBError(
-                        "Currently only single prep template "
-                        "is allowed, found %d" % len(templates)
-                    )
+                    # new with qp-cofanpi: provide a LIST of templates
+                    val_templates = list(templates)
                 elif len(templates) == 1:
-                    template = templates.pop()
+                    # for backward compatibility: use a single template
+                    val_templates = templates.pop()
                 elif self.input_artifacts:
                     # In this case we have 0 templates. What this means is that
                     # this artifact is being generated in the analysis pipeline
@@ -1576,7 +1586,7 @@ class ProcessingJob(qdb.base.QiitaObject):
                 values_dict = {
                     "files": dumps(filepaths),
                     "artifact_type": atype,
-                    "template": template,
+                    "template": val_templates,
                     "provenance": dumps(provenance),
                     "analysis": None,
                 }
