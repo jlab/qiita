@@ -74,6 +74,7 @@ class TestPrepAPIReadOnly(TestCase):
                 "User": [],
             },
         }
+
         self.assertEqual(obs, exp)
 
     def test_prep_template_ajax_get_req(self):
@@ -138,6 +139,7 @@ class TestPrepAPIReadOnly(TestCase):
             "creation_job": None,
             "alert_message": "",
         }
+
         self.assertDictEqual(obs, exp)
 
         obs = prep_template_ajax_get_req("admin@foo.bar", 1)

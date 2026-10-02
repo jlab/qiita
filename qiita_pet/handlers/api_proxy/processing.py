@@ -134,7 +134,7 @@ def list_options_handler_get_req(command_id, artifact_id=None):
         # such that they can be displayed in the according combo boxes when
         # a user parameterizes a command
         for atype in extra_atypes:
-            if artifact is not None:
+            if artifact.study is not None:
                 for extra_artifact in artifact.study.artifacts(artifact_type=atype):
                     extra_artifacts[extra_artifact.artifact_type].append(
                         (extra_artifact.id, extra_artifact.name))
