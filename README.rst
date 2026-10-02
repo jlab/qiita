@@ -1,5 +1,5 @@
 Qiita (canonically pronounced *cheetah*)
-========================================
+=========================================
 
 |Build Status| |Coverage Status|
 
