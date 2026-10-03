@@ -890,7 +890,7 @@ class ArtifactTests(TestCase):
             parents=[qdb.artifact.Artifact(1), new],
             processing_parameters=parameters,
         )
-        self.assertEqual(obs.data_type, "Multiomic")
+        self.assertEqual(obs.data_type, "18S")
 
     def test_create_root(self):
         before = datetime.now()
