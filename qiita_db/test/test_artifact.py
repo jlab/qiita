@@ -876,19 +876,21 @@ class ArtifactTests(TestCase):
             )
 
         # different data types
+        # SMJ: since qp-cofanpi plugin, we now allow Artifacts to have
+        # multiple input artifacts
         new = qdb.artifact.Artifact.create(
             self.filepaths_root, "FASTQ", prep_template=self.prep_template
         )
         parameters = qdb.software.Parameters.from_default_params(
             qdb.software.DefaultParameters(1), {"input_data": 1}
         )
-        with self.assertRaises(qdb.exceptions.QiitaDBArtifactCreationError):
-            qdb.artifact.Artifact.create(
-                self.filepaths_processed,
-                "Demultiplexed",
-                parents=[qdb.artifact.Artifact(1), new],
-                processing_parameters=parameters,
-            )
+        obs = qdb.artifact.Artifact.create(
+            self.filepaths_processed,
+            "Demultiplexed",
+            parents=[qdb.artifact.Artifact(1), new],
+            processing_parameters=parameters,
+        )
+        self.assertEqual(obs.data_type, "18S")
 
     def test_create_root(self):
         before = datetime.now()

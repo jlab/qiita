@@ -410,18 +410,19 @@ class Artifact(qdb.base.QiitaObject):
 
             return cls(a_id)
 
-        def _associate_with_study(instance, study_id, prep_template_id):
+        def _associate_with_study(instance, study_id, prep_template_ids):
             # Associate the artifact with the study
             sql = """INSERT INTO qiita.study_artifact
                         (study_id, artifact_id)
                      VALUES (%s, %s)"""
             sql_args = [study_id, instance.id]
             qdb.sql_connection.TRN.add(sql, sql_args)
-            sql = """INSERT INTO qiita.preparation_artifact
-                        (prep_template_id, artifact_id)
-                     VALUES (%s, %s)"""
-            sql_args = [prep_template_id, instance.id]
-            qdb.sql_connection.TRN.add(sql, sql_args)
+            for prepid in prep_template_ids:
+                sql = """INSERT INTO qiita.preparation_artifact
+                            (prep_template_id, artifact_id)
+                        VALUES (%s, %s)"""
+                sql_args = [prepid, instance.id]
+                qdb.sql_connection.TRN.add(sql, sql_args)
             qdb.sql_connection.TRN.execute()
 
         def _associate_with_analysis(instance, analysis_id):
@@ -464,12 +465,13 @@ class Artifact(qdb.base.QiitaObject):
                 elif len_studies == 1:
                     # This artifact is part of the processing pipeline
                     study_id = studies.pop()
+                    data_type = None
                     # In the processing pipeline, artifacts can have only
                     # one dtype
                     if len(dtypes) > 1:
-                        raise qdb.exceptions.QiitaDBArtifactCreationError(
-                            "parents have multiple data types: %s" % ", ".join(dtypes)
-                        )
+                        data_type = "Multiomic"
+                    else:
+                        data_type = list(dtypes)[0]
 
                     instance = _common_creation_steps(
                         artifact_type,
@@ -478,7 +480,7 @@ class Artifact(qdb.base.QiitaObject):
                         processing_parameters.dump(),
                     )
                     _associate_with_study(
-                        instance, study_id, parents[0].prep_templates[0].id
+                        instance, study_id, list({prep.id for p in parents for prep in p.prep_templates})
                     )
                 else:
                     # This artifact is part of the analysis pipeline
@@ -521,7 +523,7 @@ class Artifact(qdb.base.QiitaObject):
                 prep_template.artifact = instance
                 # Associate the artifact with the study
                 _associate_with_study(
-                    instance, prep_template.study_id, prep_template.id
+                    instance, prep_template.study_id, [prep_template.id]
                 )
             else:
                 # This artifact is an initial artifact of an analysis
@@ -1466,6 +1468,36 @@ class Artifact(qdb.base.QiitaObject):
                                 iid = in_art.id
                                 if iid not in nodes and iid in extra_nodes:
                                     nodes[iid] = extra_nodes[iid]
+
+                                # With the qp-cofanpi plugin, we encounter for
+                                # the first time a situation where one
+                                # processing job (not an analysis, which can
+                                # only start from BIOM artifacts) needs
+                                # multiple input artifacts. The only way to
+                                # obtain a second input artifact
+                                # seems to be a second iteration preparation.
+                                # We thus need to
+                                #   a) provide artifacts from other
+                                #      preparations (same study) as inputs for
+                                #      processing commands, see qiita_pet/
+                                #      handlers/api_proxy/processing.py
+                                #   b) the injection of network nodes for these
+                                #      "external" artifacts here
+                                # We limit creation of new nodes to those edges
+                                # from input artifacts to jobs, where the input
+                                # artifact does not exist yet (obviously), the
+                                # job (regardless of status) exists and the
+                                # additonal input artifact is not self.
+                                # This will insert the additonal artifact + job
+                                # node to BOTH preparations, i.e. this and the
+                                # one where the additional artifacts stems
+                                # from. Artifacts/Jobs can be manipulated by
+                                # the user in both preps from then on.
+                                if (iid not in nodes) and \
+                                   (n_obj.id in nodes) and \
+                                   (in_art != self):
+                                    nodes[iid] = ("artifact", in_art)
+
                                 _add_edge(edges, nodes[iid], nodes[n_obj.id])
 
                             pending = n_obj.pending
@@ -1554,13 +1586,6 @@ class Artifact(qdb.base.QiitaObject):
                 qdb.metadata_template.prep_template.PrepTemplate(pt_id)
                 for pt_id in qdb.sql_connection.TRN.execute_fetchflatten()
             ]
-
-        if len(templates) > 1:
-            # We never expect an artifact to be associated with multiple
-            # preparations
-            ids = [p.id for p in templates]
-            msg = f"Artifact({self.id}) associated with preps: {sorted(ids)}"
-            raise ValueError(msg)
 
         return templates
 

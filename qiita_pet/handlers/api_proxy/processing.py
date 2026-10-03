@@ -128,6 +128,17 @@ def list_options_handler_get_req(command_id, artifact_id=None):
                 if artifact_id != aa.id and atype in extra_atypes:
                     extra_artifacts[atype].append((aa.id, aa.name))
 
+        # The qp-cofanpi command need TWO input artifact to process on.
+        # We here add all artifacts of the required secondary type of the
+        # same study, but necessarily different preparation, as extra_artifacts
+        # such that they can be displayed in the according combo boxes when
+        # a user parameterizes a command
+        for atype in extra_atypes:
+            if artifact.study is not None:
+                for extra_artifact in artifact.study.artifacts(artifact_type=atype):
+                    extra_artifacts[extra_artifact.artifact_type].append(
+                        (extra_artifact.id, extra_artifact.name))
+
     if analysis is not None:
         analysis_artifacts = analysis.artifacts
         for aa in analysis_artifacts:

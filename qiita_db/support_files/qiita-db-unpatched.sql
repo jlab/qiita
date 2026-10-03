@@ -154,6 +154,8 @@ $$;
 
 --
 -- Name: artifact_descendants_with_jobs(bigint); Type: FUNCTION; Schema: qiita
+--       SMJ 2026-10-02: extendes such that ALL input artifacts get returned.
+--                       Can be multiple, first introduced in qp-cofanpi.
 --
 
 CREATE OR REPLACE FUNCTION qiita.artifact_descendants_with_jobs(a_id bigint) RETURNS TABLE(processing_job_id uuid, input_id bigint, output_id bigint)
@@ -176,10 +178,12 @@ BEGIN
               LEFT JOIN qiita.artifact_output_processing_job aopj USING (processing_job_id)
               JOIN root r ON (r.output_id = apj.artifact_id)
         )
-        SELECT DISTINCT root.processing_job_id, root.input_id, root.output_id
+        SELECT DISTINCT root.processing_job_id, all_in.artifact_id AS input_id, root.output_id
             FROM root
+            JOIN qiita.artifact_processing_job all_in
+                ON all_in.processing_job_id = root.processing_job_id
             WHERE root.output_id IS NOT NULL
-            ORDER BY root.input_id ASC, root.output_id ASC;
+            ORDER BY input_id ASC, root.output_id ASC;
     END IF;
 END
 $$;
